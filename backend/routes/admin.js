@@ -19,21 +19,26 @@ router.get('/stats', authorize, async (req, res) => {
                 MAX(CASE WHEN b.is_distracted = true THEN b.avg_pulse END) as pulse_distracted,
                 MAX(CASE WHEN b.is_distracted = false THEN b.avg_movement END) as move_normal,
                 MAX(CASE WHEN b.is_distracted = true THEN b.avg_movement END) as move_distracted,
-                p.sleep_hours,
-                p.phone_usage_hours,
-                p.stress_level,
-                p.accuracy,
-                p.reaction_time,
-                p.productivity_score
+                
+                -- Luăm profilul din ultima predicție
+                MAX(p.sleep_hours) as sleep_hours,
+                MAX(p.phone_usage_hours) as phone_usage_hours,
+                MAX(p.stress_level) as stress_level,
+                MAX(p.sas_score) as sas_score,
+                
+                -- Separam rezultatele Testelor & ML
+                MAX(CASE WHEN p.is_distracted = false THEN p.accuracy END) as acc_normal,
+                MAX(CASE WHEN p.is_distracted = true THEN p.accuracy END) as acc_distracted,
+                MAX(CASE WHEN p.is_distracted = false THEN p.reaction_time END) as rt_normal,
+                MAX(CASE WHEN p.is_distracted = true THEN p.reaction_time END) as rt_distracted,
+                MAX(CASE WHEN p.is_distracted = false THEN p.productivity_score END) as prod_normal,
+                MAX(CASE WHEN p.is_distracted = true THEN p.productivity_score END) as prod_distracted
+
             FROM users u
             LEFT JOIN biometrics b ON u.id = b.user_id
-            LEFT JOIN (
-                SELECT DISTINCT ON (user_id) *
-                FROM ml_predictions
-                ORDER BY user_id, created_at DESC
-            ) p ON u.id = p.user_id
-            GROUP BY u.id, u.email, p.sleep_hours, p.phone_usage_hours, p.stress_level, p.accuracy, p.reaction_time, p.productivity_score
-            ORDER BY u.id DESC
+            LEFT JOIN ml_predictions p ON u.id = p.user_id
+            GROUP BY u.id, u.email
+            ORDER BY u.id ASC
         `);
 
         res.json(allData.rows);

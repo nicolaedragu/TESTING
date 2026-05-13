@@ -6,6 +6,8 @@ import StroopTest from './pages/StroopTest';
 import CPTTest from './pages/CPTTest';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import StressTest from './pages/StressTest';
+import AddictionTest from './pages/AddictionTest';
 
 function App() {
   return (
@@ -19,6 +21,9 @@ function App() {
         <Route path="/cpt-test" element={<CPTTest />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/stress-test" element={<StressTest />} />
+        <Route path="/addiction-test" element={<AddictionTest />} />
+        
       </Routes>
     </Router>
   );

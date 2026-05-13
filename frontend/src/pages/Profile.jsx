@@ -19,12 +19,24 @@ export default function Profile() {
     // 1. Încărcăm datele salvate local pentru formular
     useEffect(() => {
         const savedData = localStorage.getItem('userProfileData');
+        const calculatedStress = localStorage.getItem('stress_level_ml'); // Nivelul 1-10 din test
+
         if (savedData) {
             try {
-                setProfileData(JSON.parse(savedData));
+                let parsedData = JSON.parse(savedData);
+                
+                // Dacă utilizatorul a făcut testul de stres, suprascriem valoarea veche
+                if (calculatedStress) {
+                    parsedData.stress_level = Number(calculatedStress);
+                }
+                
+                setProfileData(parsedData);
             } catch (e) {
                 console.error("Eroare la parsarea datelor din localStorage", e);
             }
+        } else if (calculatedStress) {
+            // Dacă nu avem profil deloc, dar avem testul de stres făcut
+            setProfileData(prev => ({ ...prev, stress_level: Number(calculatedStress) }));
         }
     }, []);
 
@@ -56,7 +68,7 @@ export default function Profile() {
     }, []);
 
     const handleChange = (e) => {
-        // Când se modifică formularul, updatăm starea și localStorage INSTANT
+        // Când se modifică formularul, updatăm starea și localStorage
         const updatedData = { ...profileData, [e.target.name]: Number(e.target.value) };
         setProfileData(updatedData);
         localStorage.setItem('userProfileData', JSON.stringify(updatedData));
@@ -64,8 +76,19 @@ export default function Profile() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Nu mai e nevoie de salvare aici, o facem onChange
-        console.log("Date profil pregătite pentru ML:", profileData);
+        
+        // Luăm ultima valoare a stresului calculat
+        const finalStress = Number(localStorage.getItem('stress_level_ml')) || profileData.stress_level;
+        
+        const finalProfile = {
+            ...profileData,
+            stress_level: finalStress
+        };
+
+        // Salvează varianta finală în localStorage pentru a fi citită mai departe
+        localStorage.setItem('userProfileData', JSON.stringify(finalProfile));
+        
+        console.log("Date profil finale transmise:", finalProfile);
         navigate('/dashboard');
     };
 
@@ -73,7 +96,7 @@ export default function Profile() {
         <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-8 relative">
             <div className="max-w-4xl bg-white p-10 rounded-2xl shadow-2xl border-4 border-[#3a86ff] w-full grid grid-cols-1 md:grid-cols-2 gap-10">
                 
-                {/* Partea Stângă: Formularul de Profil */}
+                {/* Formularul de Profil */}
                 <div>
                     <h1 className="text-3xl font-black text-[#8338ec] mb-2 uppercase tracking-tight">Profil Utilizator</h1>
                     <p className="text-gray-500 font-semibold mb-8 text-sm leading-relaxed">
@@ -113,27 +136,88 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* Nivel de Stres */}
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <label className="block text-sm font-black text-[#3a86ff] uppercase tracking-wider mb-2">
-                                Nivel de stres acum (1-10): <span className="text-[#8338ec]">{profileData.stress_level}</span>
-                            </label>
-                            <input 
-                                type="range" name="stress_level" min="1" max="10" 
-                                value={profileData.stress_level} onChange={handleChange}
-                                className="w-full accent-[#3a86ff] cursor-pointer"
-                            />
-                            <div className="flex justify-between text-xs text-gray-400 font-bold mt-1 uppercase">
-                                <span>Relaxat</span>
-                                <span>Stresat</span>
+                    {/* Nivel de Stres */}
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                        <label className="block text-sm font-black text-[#3a86ff] uppercase tracking-wider mb-2">
+                            Nivel de stres
+                        </label>
+                        
+                        {localStorage.getItem('pss_score_real') ? (
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-xl font-black text-[#3a86ff]">
+                                        Scorul din chestionar : <span className="text-[#8338ec]">{localStorage.getItem('pss_score_real')} / 40</span>
+                                    </p>
+                                    <p className="text-s text-gray-500 font-bold mt-1">
+                                        Echivalent din 10: {localStorage.getItem('stress_level_ml')}/10
+                                    </p>
+                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={() => navigate('/stress-test')}
+                                    className="bg-white border-2 border-[#ff006e] text-[#ff006e] px-4 py-2 rounded-lg font-bold hover:bg-[#ff006e] hover:text-white transition"
+                                >
+                                    Refă testul
+                                </button>
                             </div>
-                        </div>
+                        ) : (
+                            <div>
+                                <p className="text-gray-600 mb-4 text-sm font-semibold">
+                                    Pentru a determina nivelul tău de stres, completează chestionarul Perceived Stress Scale.
+                                </p>
+                                <button 
+                                    type="button"
+                                    onClick={() => navigate('/stress-test')}
+                                    className="w-full bg-[#ff006e] text-white px-6 py-4 rounded-xl font-black hover:scale-105 transition-transform shadow-md uppercase"
+                                >
+                                    COMPLETEAZĂ CHESTIONARUL
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Smartphone Addiction Scale */}
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <label className="block text-sm font-black text-[#3a86ff] uppercase tracking-wider mb-2">
+                                Dependență Digitală
+                            </label>
+                        
+                        {localStorage.getItem('sas_score') ? (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p className="text-xl font-black text-[#3a86ff]">
+                                    Scor: <span className="text-[#8338ec] text-xl">{localStorage.getItem('sas_score')}/10</span> 
+                                </p>
+                                <button 
+                                    type="button" 
+                                    onClick={() => navigate('/addiction-test')}
+                                    className="bg-white border-2 border-[#ff006e] text-[#ff006e] px-4 py-2 rounded-lg font-bold hover:bg-[#ff006e] hover:text-white transition"
+                                >
+                                    Refă testul
+                                </button>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-gray-600 mb-4 text-sm font-semibold">
+                                    Pentru a determina nivelul tău de dependență de telefon, completează chestionarul Smartphone Addiction Scale. Acest scor este utilizat strict în scop de cercetare și nu influențează rezultatele.
+                                </p>
+                                <button 
+                                    type="button" 
+                                    onClick={() => navigate('/addiction-test')}
+                                    className="w-full bg-[#ff006e] text-white px-6 py-4 rounded-xl font-black hover:scale-105 transition-transform shadow-md uppercase"
+                                >
+                                    COMPLETEAZĂ CHESTIONARUL
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
 
                         <button type="submit" className="w-full bg-[#3a86ff] text-white py-4 rounded-xl font-black uppercase text-xl hover:scale-105 transition shadow-xl mt-6 border-2 border-[#8338ec]">
                             MERGI LA DASHBOARD
                         </button>
                     </form>
-                </div>
+                    </div>
+                    
 
                 {/* Partea Dreaptă: Analiza Biometrică Comparativă */}
                 <div className="bg-gray-50 rounded-2xl border-2 border-gray-200 p-6 flex flex-col">

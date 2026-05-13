@@ -6,7 +6,7 @@ const authorize = require('../middleware/authorize');
 const pool = require('../db');
 
 router.post('/productivity', authorize, (req, res) => {
-    const { sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time } = req.body;
+    const { sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time, is_distracted, sas_score } = req.body;
 
     // Presupunem 1000ms = 100 puncte. Scădem 1 punct la fiecare 10ms în plus.
     let speed_score = 100 - ((reaction_time - 1000) / 10);
@@ -39,9 +39,9 @@ router.post('/productivity', authorize, (req, res) => {
             try {
                 await pool.query(
                     `INSERT INTO ml_predictions 
-                    (user_id, sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time, productivity_score) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                    [req.user.user_id, sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time, result.productivity_score]
+                    (user_id, sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time, productivity_score, is_distracted, sas_score) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                    [req.user.user_id, sleep_hours, phone_usage_hours, stress_level, accuracy, reaction_time, result.productivity_score, is_distracted || false, sas_score || null]
                 );
             } catch (dbErr) {
                 console.error("Eroare la salvarea predicției în DB:", dbErr.message);

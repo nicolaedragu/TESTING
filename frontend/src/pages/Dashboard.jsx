@@ -62,10 +62,13 @@ export default function Dashboard() {
         }
     };
     
+    // false înseamnă mediu normal, true înseamnă experimental
+    const [predictionMode, setPredictionMode] = useState(false);
+    
     // Pentru predicție
     const [predictionResult, setPredictionResult] = useState(null);
 
-const generateMLPrediction = async () => {
+    const generateMLPrediction = async () => {
         const savedProfileStr = localStorage.getItem('userProfileData');
         
         if (!savedProfileStr) {
@@ -97,7 +100,9 @@ const generateMLPrediction = async () => {
             phone_usage_hours: Number(savedProfile.phone_usage_hours),
             stress_level: Number(savedProfile.stress_level),
             accuracy: Number((totalAcc / testsCount).toFixed(2)),
-            reaction_time: Number((totalRt / testsCount).toFixed(2))
+            reaction_time: Number((totalRt / testsCount).toFixed(2)),
+            sas_score: localStorage.getItem('sas_score') ? Number(localStorage.getItem('sas_score')) : null,
+            is_distracted: predictionMode
         };
 
         console.log("payload:", payload);
@@ -115,6 +120,14 @@ const generateMLPrediction = async () => {
             const data = await response.json();
             if (response.ok) {
                 setPredictionResult({...data, tests_used: testsCount});
+                                
+                // Ștergem testele din memorie ca să nu se amestece cu runda următoare
+                localStorage.removeItem('realAccuracy');
+                localStorage.removeItem('realReactionTime');
+                localStorage.removeItem('cptAccuracy');
+                localStorage.removeItem('cptReactionTime');
+                
+                alert(`Predicție salvată cu succes în modul ${predictionMode ? 'EXPERIMENTAL' : 'NORMAL'}! \n\nMemoria testelor a fost curățată. Poți începe următoarea sesiune de teste.`);
             } else {
                 alert("Eroare de la model: " + data.message);
             }
@@ -201,7 +214,7 @@ const generateMLPrediction = async () => {
                                     onClick={() => setIsDistractedUpload(true)}
                                     className={`px-4 py-2 rounded-md font-bold text-sm transition-all ${isDistractedUpload ? 'bg-[#ff006e] text-white shadow-sm' : 'text-white opacity-70 hover:opacity-100'}`}
                                 >
-                                    Experimental (Cu Notificări)
+                                    Experimental (Cu notificări)
                                 </button>
                             </div>
                         </div>
@@ -254,15 +267,47 @@ const generateMLPrediction = async () => {
                             Predicție Productivitate
                         </h2>
                         <p className="text-gray-600 font-semibold mb-6">
-                            Folosind Machine Learning, algoritmul Random Forest analizează profilul tău și rezultatele din teste pentru a estima un <strong>scor de productivitate</strong>. Am ales un timp de 1 sec ca răspuns optim.
+                            Folosind Machine Learning, algoritmul Random Forest analizează profilul tău și rezultatele din teste pentru a estima un <strong>scor de productivitate</strong>. Am ales un timp de 1 sec ca răspuns optim. Calculează scorul o dată după ce dai testele în mediu normal, iar încă o dată după ce dai testele în mod experimental.
                         </p>
                         
-                        <button 
-                            onClick={generateMLPrediction}
-                            className="bg-gray-800 text-white px-10 py-4 rounded-xl text-xl font-black hover:scale-105 transition-transform shadow-lg uppercase w-full"
-                        >
-                            Calculează Scorul
-                        </button>
+                        <div className="mt-8 bg-gray-900 p-8 rounded-2xl shadow-2xl border-4 border-[#ffbe0b]">
+                            
+                            {/* Selector stilizat pentru Modul de Testare */}
+                            <div className="bg-white/10 p-4 rounded-xl mb-6 border border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <label className="text-white font-black uppercase tracking-wider text-sm cursor-pointer">
+                                    MEDIU:
+                                </label>
+                                    <div className="flex bg-white/20 rounded-lg p-1">
+                                        <button 
+                                            onClick={() => setPredictionMode(false)}
+                                            className={`flex-1 sm:flex-none px-6 py-3 rounded-md font-bold text-sm transition-all uppercase ${
+                                                !predictionMode 
+                                                    ? 'bg-white text-[#7cb518] shadow-md scale-105' 
+                                                    : 'text-white opacity-70 hover:opacity-100 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            Normal
+                                        </button>
+                                        <button 
+                                            onClick={() => setPredictionMode(true)}
+                                            className={`flex-1 sm:flex-none px-6 py-3 rounded-md font-bold text-sm transition-all uppercase ${
+                                                predictionMode 
+                                                    ? 'bg-[#ff006e] text-white shadow-md scale-105' 
+                                                    : 'text-white opacity-70 hover:opacity-100 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            Experimental (cu notificări)
+                                        </button>
+                                    </div>
+                            </div>
+                        
+                            <button 
+                                onClick={generateMLPrediction}
+                                className="bg-gray-800 text-white px-10 py-4 rounded-xl text-xl font-black hover:scale-105 transition-transform shadow-lg uppercase w-full"
+                                >
+                                Calculează Scorul
+                            </button>
+                        </div>
 
                         {predictionResult && (
                             <div className="mt-8 bg-gray-50 p-6 rounded-2xl border-2 border-gray-200">
@@ -292,6 +337,8 @@ const generateMLPrediction = async () => {
                             </div>
                         )}
                     </div>
+                    
+                    
                 </div>
             </div>
 
