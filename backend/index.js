@@ -22,7 +22,6 @@ app.use('/cpt', require('./routes/cpt'));
 app.use('/biometrics', require('./routes/biometrics'));
 app.use('/predict', require('./routes/predict'));
 app.use('/admin', require('./routes/admin'));
-
 // ------------------
 
 app.get('/', (req, res) => {
